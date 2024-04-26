@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 import os
 import time
 import ssl
-import uuid
 
 
 #include SSL cert and OpenAI key in a .env file
@@ -18,17 +17,31 @@ client = OpenAI(
     api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
 )
 
-explicit_input=''
+# Initialize variables for chat history
+explicit_input = ""
+chatgpt_output = 'Chat log: /n'
+cwd = os.getcwd()
+i = 1
+
+# Find an available chat history file
+while os.path.exists(os.path.join(cwd, f'chat_history{i}.txt')):
+    i += 1
+
+history_file = os.path.join(cwd, f'chat_history{i}.txt')
+
+# Create a new chat history file
+with open(history_file, 'w') as f:
+    f.write('\n')
+
+# Initialize chat history
+chat_history = ''
+
 # Create a Flask web application
 app = Flask(__name__)
 CORS(app)  # Initialize CORS for the entire app
 
-user_id = str(uuid.uuid4())
-cwd = os.getcwd()
-history_file = os.path.join(cwd, f'chat_history{user_id}.txt')
-
 # Function to complete chat input using OpenAI's GPT-3.5 Turbo
-def chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, chat_history):
+def chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, explicit_input, chat_history):
     output = client.chat.completions.create(model="gpt-3.5-turbo-0301",
     temperature=1,
     presence_penalty=0,
@@ -40,26 +53,27 @@ def chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustom
     ])
 
     chatgpt_output = output.choices[0].message.content
-    updated_chat_history = chat_history + f'\nUser: {user_input}\nArabicBot: {chatgpt_output}\n'
-    return chatgpt_output, updated_chat_history
+
+    return chatgpt_output
 
 # Function to handle user chat input
-def chat(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, chat_history, history_file):
+def chat(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2):
+    global chat_history, name, chatgpt_output
     name = varName 
-    chatgpt_raw_output, updated_chat_history = chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, chat_history)
+    current_day = time.strftime("%d/%m", time.localtime())
+    current_time = time.strftime("%H:%M:%S", time.localtime())
+    chat_history += f'\nUser: {user_input}\n'
+    chatgpt_raw_output = chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, explicit_input, chat_history).replace(f'{name}:', '')
+    chatgpt_output = f'{name}: {chatgpt_raw_output}'
+    chat_history += chatgpt_output + '\n'
     with open(history_file, 'a') as f:
-        f.write(updated_chat_history)
+        f.write('\n'+ current_day+ ' '+ current_time+ ' User: ' +user_input +' \n' + current_day+ ' ' + current_time+  ' ' +  chatgpt_output + '\n')
+        f.close()
     return chatgpt_raw_output
 
 # Function to get a response from the chatbot
-def get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2, chat_history, history_file):
-    return chat(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2, chat_history, history_file)
-    
-def creat_new_chat_history_file():
-    with open(history_file, 'w') as f:
-        f.write('\n')
-        
-creat_new_chat_history_file()
+def get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2):
+    return chat(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2)
 
 # Define app routes
 
@@ -76,9 +90,7 @@ def get_bot_response():
     varPrompt = request.args.get('varPrompt')
     varCustomVariable1 = request.args.get('varCustomVariable1')
     varCustomVariable2 = request.args.get('varCustomVariable2')
-    chat_history = ''
-    response = get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2, chat_history, history_file)
-    return str(response)
+    return str(get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2))
 
 @app.route('/refresh')
 def refresh():
@@ -94,3 +106,4 @@ context.load_cert_chain(CERT_FILE, KEY_FILE)
 if __name__ == "__main__":
     #Recommended to define a specific host url for security and your own port
     app.run(ssl_context=context, host='0.0.0.0', port=8030)
+
