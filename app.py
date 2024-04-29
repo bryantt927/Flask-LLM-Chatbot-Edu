@@ -102,8 +102,8 @@ def refresh():
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER) 
 context.load_cert_chain(CERT_FILE, KEY_FILE)
 
-# Run the Flask app
-if __name__ == "__main__":
+# Run the Flask app, don't run if launching with wsgi server
+#if __name__ == "__main__":
     #Recommended to define a specific host url for security and your own port
-    app.run(ssl_context=context, host='0.0.0.0', port=8030)
+#    app.run(ssl_context=context, host='0.0.0.0', port=8030)
 
