@@ -1,5 +1,5 @@
 # Import necessary libraries
-from flask import Flask, render_template, request, redirect, jsonify
+from flask import Flask, render_template, request, redirect, jsonify, session, make_response
 from flask_cors import CORS
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import os
 import time
 import ssl
+import secrets
 
 
 #include SSL cert and OpenAI key in a .env file
@@ -16,6 +17,12 @@ KEY_FILE = os.environ['KEY_FILE']
 client = OpenAI(
     api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
 )
+
+# Create a Flask web application
+app = Flask(__name__)
+CORS(app)  # Initialize CORS for the entire app
+
+
 
 # Initialize variables for chat history
 explicit_input = ""
@@ -35,10 +42,6 @@ with open(history_file, 'w') as f:
 
 # Initialize chat history
 chat_history = ''
-
-# Create a Flask web application
-app = Flask(__name__)
-CORS(app)  # Initialize CORS for the entire app
 
 # Function to complete chat input using OpenAI's GPT-3.5 Turbo
 def chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, explicit_input, chat_history):
@@ -79,12 +82,38 @@ def get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVari
 
 # You only need this route if you are not embedding this html into a webpage or your LMS
 @app.route("/")
-def index():
-    return render_template("index.html")
+def set_cookie():
+    print("in root route")
+    print("Session is " + str(session.get('logged_in')) + " START")  
+    if session.get('logged_in') == True:
+        print("already logged in, add to log file")
+    elif session.get('logged_in') != True:
+        session['logged_in'] = True
+        print("logging in user now, create new file")
+    print("Session is " + str(session.get('logged_in')) + " END")
+    response = make_response("Cookie set!") 
+    #print("response headers ONE" + response.headers)
+    response.set_cookie("username", "John Doe", path="/", domain="chatbot.dickinson.edu") 
+          # Initializing response object 
+    print(response.headers)
+    return response
+
+    #return render_template("index.html")
+    #resp = make_response(render_template("index.html"))
+    #resp.set_cookie('somecookiename', 'I am cookie')
+    #return resp 
 
 @app.route("/get")
 # Function for the bot response
 def get_bot_response():
+    print("GET Route Session is " + str(session.get('logged_in')) + " START") 
+    username = request.cookies.get("username")
+    print("Username is " + str(username))
+    if session.get('logged_in') == True:
+        print("already logged in, add to log file GET")
+    elif session.get('logged_in') != True:
+        session['logged_in'] = True
+        print("logging in user now, create new file GET")
     userText = request.args.get('msg')
     varName = request.args.get('varName')
     varPrompt = request.args.get('varPrompt')
@@ -103,7 +132,9 @@ context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(CERT_FILE, KEY_FILE)
 
 # Run the Flask app, don't run if launching with wsgi server
-#if __name__ == "__main__":
+if __name__ == "__main__":
     #Recommended to define a specific host url for security and your own port
-#    app.run(ssl_context=context, host='0.0.0.0', port=8030)
+    app.secret_key = 'bigsecret'
+    app.run(ssl_context=context, host='0.0.0.0', port=8030, debug=True)
+    
 
