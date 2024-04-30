@@ -93,7 +93,7 @@ def set_cookie():
     print("Session is " + str(session.get('logged_in')) + " END")
     response = make_response("Cookie set!") 
     #print("response headers ONE" + response.headers)
-    response.set_cookie("username", "John Doe", path="/", domain="chatbot.dickinson.edu") 
+    response.set_cookie("username", "John Doe", path="/", domain="dickinson.edu") 
           # Initializing response object 
     print(response.headers)
     return response
@@ -135,6 +135,6 @@ context.load_cert_chain(CERT_FILE, KEY_FILE)
 if __name__ == "__main__":
     #Recommended to define a specific host url for security and your own port
     app.secret_key = 'bigsecret'
-    app.run(ssl_context=context, host='0.0.0.0', port=8030, debug=True)
+    app.run(ssl_context=context, host='0.0.0.0', port=8030)
     
 
