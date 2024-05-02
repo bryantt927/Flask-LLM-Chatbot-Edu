@@ -44,7 +44,7 @@ with open(history_file, 'w') as f:
 chat_history = ''
 
 # Function to complete chat input using OpenAI's GPT-3.5 Turbo
-def chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, explicit_input, chat_history):
+def chatcompletion(user_input, varName, varPrompt, varUserToken, varCustomVariable1, explicit_input, chat_history):
     output = client.chat.completions.create(model="gpt-3.5-turbo-0301",
     temperature=1,
     presence_penalty=0,
@@ -60,13 +60,13 @@ def chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustom
     return chatgpt_output
 
 # Function to handle user chat input
-def chat(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2):
+def chat(user_input, varName, varPrompt, varUserToken, varCustomVariable1):
     global chat_history, name, chatgpt_output
     name = varName 
     current_day = time.strftime("%d/%m", time.localtime())
     current_time = time.strftime("%H:%M:%S", time.localtime())
     chat_history += f'\nUser: {user_input}\n'
-    chatgpt_raw_output = chatcompletion(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2, explicit_input, chat_history).replace(f'{name}:', '')
+    chatgpt_raw_output = chatcompletion(user_input, varName, varPrompt, varUserToken, varCustomVariable1, explicit_input, chat_history).replace(f'{name}:', '')
     chatgpt_output = f'{name}: {chatgpt_raw_output}'
     chat_history += chatgpt_output + '\n'
     with open(history_file, 'a') as f:
@@ -75,28 +75,32 @@ def chat(user_input, varName, varPrompt, varCustomVariable1, varCustomVariable2)
     return chatgpt_raw_output
 
 # Function to get a response from the chatbot
-def get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2):
-    return chat(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2)
+def get_response(userText, varName, varPrompt, varUserToken, varCustomVariable1):
+    return chat(userText, varName, varPrompt, varUserToken, varCustomVariable1)
 
 # Define app routes
 
-# You only need this route if you are not embedding this html into a webpage or your LMS
-@app.route("/")
+# This is triggered when the page is loaded, set a cookie so each user has one logfile created
+# to maintain history sent to LLM and keep as a log.
+@app.route("/", methods=['GET'])
 def set_cookie():
     print("in root route")
-    print("Session is " + str(session.get('logged_in')) + " START")  
+    #print("Session is " + str(session.get('logged_in')) + " START")  
     if session.get('logged_in') == True:
         print("already logged in, add to log file")
     elif session.get('logged_in') != True:
         session['logged_in'] = True
         print("logging in user now, create new file")
     print("Session is " + str(session.get('logged_in')) + " END")
-    response = make_response("Cookie set!") 
+    #response = make_response(render_template("index.html")) 
+    response = make_response()
     #print("response headers ONE" + response.headers)
-    response.set_cookie("username", "John Doe", path="/", domain="dickinson.edu") 
-          # Initializing response object 
-    print(response.headers)
+    #response.headers['Access-Control-Allow-Credentials'] = True
+    #response.set_cookie("username", "John Doe", path="/", domain=".dickinson.edu")
     return response
+
+
+
 
     #return render_template("index.html")
     #resp = make_response(render_template("index.html"))
@@ -117,9 +121,9 @@ def get_bot_response():
     userText = request.args.get('msg')
     varName = request.args.get('varName')
     varPrompt = request.args.get('varPrompt')
+    varUserToken = request.args.get('varUserToken')
     varCustomVariable1 = request.args.get('varCustomVariable1')
-    varCustomVariable2 = request.args.get('varCustomVariable2')
-    return str(get_response(userText, varName, varPrompt, varCustomVariable1, varCustomVariable2))
+    return str(get_response(userText, varName, varPrompt, varUserToken, varCustomVariable1))
 
 @app.route('/refresh')
 def refresh():
