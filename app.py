@@ -28,30 +28,17 @@ CORS(app)  # Initialize CORS for the entire app
 explicit_input = ""
 chatgpt_output = 'Chat log: /n'
 cwd = os.getcwd()
-i = 1
-
-# Find an available chat history file
-while os.path.exists(os.path.join(cwd, f'chat_history{i}.txt')):
-    i += 1
-
-history_file = os.path.join(cwd, f'chat_history{i}.txt')
-
-# Create a new chat history file
-with open(history_file, 'w') as f:
-    f.write('\n')
-
-# Initialize chat history
 chat_history = ''
 
 # Function to complete chat input using OpenAI's GPT-3.5 Turbo
-def chatcompletion(user_input, varName, varPrompt, varUserToken, varCustomVariable1, explicit_input, chat_history):
+def chatcompletion(user_input, user_name, user_prompt, user_token, custom_variable_1, explicit_input, chat_history):
     output = client.chat.completions.create(model="gpt-3.5-turbo-0301",
     temperature=1,
     presence_penalty=0,
     frequency_penalty=0,
     max_tokens=2000,
     messages=[
-        {"role": "system", "content": f"{varPrompt}. Conversation history: {chat_history}"},
+        {"role": "system", "content": f"{user_prompt}. Conversation history: {chat_history}"},
         {"role": "user", "content": f"{user_input}. {explicit_input}"},
     ])
 
@@ -60,70 +47,78 @@ def chatcompletion(user_input, varName, varPrompt, varUserToken, varCustomVariab
     return chatgpt_output
 
 # Function to handle user chat input
-def chat(user_input, varName, varPrompt, varUserToken, varCustomVariable1):
+def chat(user_input, user_name, user_prompt, user_token, custom_variable_1):
     global chat_history, name, chatgpt_output
-    name = varName 
+    
+    # Each time only set chat_history equal to users log of chat_history find with token.
+    history_file = os.path.join(cwd, f'chat_history{user_token}.txt') 
+    f = open(history_file, 'r')
+    chat_history = f.read()
+    print("Chat history is " + chat_history)
     current_day = time.strftime("%d/%m", time.localtime())
     current_time = time.strftime("%H:%M:%S", time.localtime())
     chat_history += f'\nUser: {user_input}\n'
-    chatgpt_raw_output = chatcompletion(user_input, varName, varPrompt, varUserToken, varCustomVariable1, explicit_input, chat_history).replace(f'{name}:', '')
-    chatgpt_output = f'{name}: {chatgpt_raw_output}'
+    chatgpt_raw_output = chatcompletion(user_input, user_name, user_prompt, user_token, custom_variable_1, explicit_input, chat_history).replace(f'{user_name}:', '')
+    chatgpt_output = f'{user_name}: {chatgpt_raw_output}'
     chat_history += chatgpt_output + '\n'
+#    user_token = varUserToken
+    history_file = os.path.join(cwd, f'chat_history{user_token}.txt')
     with open(history_file, 'a') as f:
         f.write('\n'+ current_day+ ' '+ current_time+ ' User: ' +user_input +' \n' + current_day+ ' ' + current_time+  ' ' +  chatgpt_output + '\n')
         f.close()
     return chatgpt_raw_output
 
 # Function to get a response from the chatbot
-def get_response(userText, varName, varPrompt, varUserToken, varCustomVariable1):
-    return chat(userText, varName, varPrompt, varUserToken, varCustomVariable1)
+def get_response(userText, user_name, user_prompt, user_token, custom_variable_1):
+    return chat(userText, user_name, user_prompt, user_token, custom_variable_1)
 
 # Define app routes
 
 # This is triggered when the page is loaded, set a cookie so each user has one logfile created
 # to maintain history sent to LLM and keep as a log.
 @app.route("/", methods=['GET'])
-def set_cookie():
+def on_page_load():
     print("in root route")
-    #print("Session is " + str(session.get('logged_in')) + " START")  
-    if session.get('logged_in') == True:
-        print("already logged in, add to log file")
-    elif session.get('logged_in') != True:
-        session['logged_in'] = True
-        print("logging in user now, create new file")
-    print("Session is " + str(session.get('logged_in')) + " END")
-    #response = make_response(render_template("index.html")) 
+    user_token = request.args.get('user_token')
+
+    # Find an available chat history file
+    if os.path.exists(os.path.join(cwd, f'chat_history{user_token}.txt')):
+      history_file = os.path.join(cwd, f'chat_history{user_token}.txt')
+
+    # Create a new chat history file
+    else:
+      history_file = os.path.join(cwd, f'chat_history{user_token}.txt') 
+      f = open(history_file, 'w')
+      f.write('\n')
+
     response = make_response()
-    #print("response headers ONE" + response.headers)
-    #response.headers['Access-Control-Allow-Credentials'] = True
-    #response.set_cookie("username", "John Doe", path="/", domain=".dickinson.edu")
+
     return response
 
 
 
-
-    #return render_template("index.html")
-    #resp = make_response(render_template("index.html"))
-    #resp.set_cookie('somecookiename', 'I am cookie')
-    #return resp 
-
 @app.route("/get")
 # Function for the bot response
 def get_bot_response():
-    print("GET Route Session is " + str(session.get('logged_in')) + " START") 
-    username = request.cookies.get("username")
-    print("Username is " + str(username))
-    if session.get('logged_in') == True:
-        print("already logged in, add to log file GET")
-    elif session.get('logged_in') != True:
-        session['logged_in'] = True
-        print("logging in user now, create new file GET")
     userText = request.args.get('msg')
-    varName = request.args.get('varName')
-    varPrompt = request.args.get('varPrompt')
-    varUserToken = request.args.get('varUserToken')
-    varCustomVariable1 = request.args.get('varCustomVariable1')
-    return str(get_response(userText, varName, varPrompt, varUserToken, varCustomVariable1))
+    user_name = request.args.get('varName')
+    user_prompt = request.args.get('varPrompt')
+    user_token = request.args.get('varUserToken')
+    custom_variable_1 = request.args.get('varCustomVariable1')
+
+
+
+    # Find user's chat history file
+    if os.path.exists(os.path.join(cwd, f'chat_history{user_token}.txt')):
+      history_file = os.path.join(cwd, f'chat_history{user_token}.txt')
+
+    # Create a new chat history file
+    else:
+      history_file = os.path.join(cwd, f'chat_history{user_token}.txt') 
+      f = open(history_file, 'w')
+      f.write('\n')
+
+    return str(get_response(userText, user_name, user_prompt, user_token, custom_variable_1))
 
 @app.route('/refresh')
 def refresh():
