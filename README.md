@@ -1,4 +1,4 @@
-# Flask-LLMO-Chatbot-Edu
+# Flask-LLM-Chatbot-Edu
 A Flask chatbot application that can run on a server with Flask and Python installed.  Copy and paste the html from templates/index.html into any page on your LMS or CMS
 
 ![Python Version](https://img.shields.io/badge/Python-3.9-blue)
