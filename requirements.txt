@@ -1,2 +1,7 @@
-Flask==2.2.3
-openai==0.27.2
+Flask==3.0.3
+Flask_Cors==4.0.0
+HTMLParser==0.0.2
+openai==1.28.0
+pyOpenSSL==24.0.0
+pyOpenSSL==24.1.0
+python-dotenv==1.0.1
