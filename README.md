@@ -7,17 +7,17 @@ A Flask chatbot application that can run on a server with Flask and Python insta
 
 ## Features
 
-- Embed a chatbot that interfaces with the OpenAI API by adding html and javascript into any website
+- Embed a chatbot that interfaces with the OpenAI API or a locally hosted LLM running LM Studio by adding html and javascript into any website
 - Set the name of your bot and introductory prompt with whom you students can converse
+- Set the model in the app.py code
 
 ## Getting Started
 
 ### Prerequisites
 
-- Ley from OpenAI for their API
+- Key from OpenAI for their API or own server running LM Studio
 - Python 3.7+ installed on your system.
 - Flask 2.0.1 and OpenAI Python SDK installed.
-- Set up your OpenAI API key.
 
 ### Installation
 
@@ -37,8 +37,7 @@ pip install -r requirements.txt
 ```
 This command will install required Python packages and dependencies required for your chatbot application.
 
-4. Configure your OpenAI API key:
-You will want need to make changes to files for your local installation
+4. Configure your LLM model and location by choosing 'client' variable in app.py.  Default is OpenAI and 3.5 turbo model.
 
 a. Open .env in a text editor or code editor of your choice and set the variables
 
